@@ -4,8 +4,6 @@
 
 # Determine OS version
 
-osvers=$(sw_vers -productVersion | awk -F. '{print $2}')
-
 IdentifyLatestJDKRelease(){
 
 # Determine the download URL for the latest CPU release or PSU release.
@@ -34,15 +32,10 @@ Java_8_JDK_PSU_URL=`/usr/bin/curl -s http://www.oracle.com/technetwork/java/java
 
 }
 
-if [[ ${osvers} -lt 8 ]]; then
-  echo "Oracle Java 8 JDK is not available for Mac OS X 10.7.5 or earlier."
-fi
-
-if [[ ${osvers} -ge 8 ]]; then
 
     # Specify name of downloaded disk image
 
-    java_eight_jdk_dmg="/tmp/java_eight_jdk.dmg"
+    java_eight_jdk_tgz="/tmp/java_eight_jdk.tar.gz"
  
 
     
@@ -78,57 +71,7 @@ if [[ ${osvers} -ge 8 ]]; then
     # The curl -L option is needed because there is a redirect 
     # that the requested page has moved to a different location.
 
-    /usr/bin/curl --retry 3 -Lo "$java_eight_jdk_dmg" "$fileURL" -H "Cookie: oraclelicense=accept-securebackup-cookie"
+    /usr/bin/curl --retry 3 -Lo "$java_eight_jdk_tgz" "$fileURL" -H "Cookie: oraclelicense=accept-securebackup-cookie"
 
-    # Specify a /tmp/java_eight_jdk.XXXX mountpoint for the disk image
  
-    TMPMOUNT=`/usr/bin/mktemp -d /tmp/java_eight_jdk.XXXX`
-
-    # Mount the latest Oracle Java 8 disk image to /tmp/java_eight_jdk.XXXX mountpoint
- 
-    hdiutil attach "$java_eight_jdk_dmg" -mountpoint "$TMPMOUNT" -nobrowse -noverify -noautoopen
-
-    # Install Oracle Java 8 JDK from the installer package. This installer may
-    # be stored inside an install application on the disk image, or there
-    # may be an installer package available at the root of the mounted disk
-    # image.
-
-    if [[ -e "$(/usr/bin/find $TMPMOUNT -maxdepth 1 \( -iname \*JDK*\.pkg -o -iname \*JDK*\.mpkg \))" ]]; then    
-      pkg_path="$(/usr/bin/find $TMPMOUNT -maxdepth 1 \( -iname \*JDK*\.pkg -o -iname \*JDK*\.mpkg \))"
-    fi
-         
-    # Before installation, the installer's developer certificate is checked to
-    # see if it has been signed by Oracle's developer certificate. Once the 
-    # certificate check has been passed, the package is then installed.
-    
-    if [[ "${pkg_path}" != "" ]]; then
-        signature_check=`/usr/sbin/pkgutil --check-signature "$pkg_path" | awk /'Developer ID Installer/{ print $5 }'`
-           if [[ ${signature_check} = "Oracle" ]]; then
-             /bin/echo "The downloaded Oracle Java 8 JDK installer package is signed by Oracle's Developer ID Installer certificate."
-             /bin/echo "Proceeding with installation of the latest Oracle Java 8 JDK."
-             # Install Oracle Java 8 JDK from the installer package stored inside the disk image
-             /usr/sbin/installer -dumplog -verbose -pkg "${pkg_path}" -target "/"
-             
-             # Report on the currently installed version of the Oracle Java 8 JDK
-             javaJDKVersion=`/usr/bin/java -version 2>&1 | awk 'NR==1{ gsub(/"/,""); print $3 }'`
-             /bin/echo "Oracle Java 8 JDK $javaJDKVersion has been installed."
-             
-           fi
-    fi
-
-    # Clean-up
- 
-    # Unmount the Oracle Java 8 JDK disk image from /tmp/java_eight_jdk.XXXX
- 
-    /usr/bin/hdiutil detach -force "$TMPMOUNT"
- 
-    # Remove the /tmp/java_eight_jdk.XXXX mountpoint
- 
-    /bin/rm -rf "$TMPMOUNT"
-
-    # Remove the downloaded disk image
-
-    /bin/rm -rf "$java_eight_jdk_dmg"
-fi
-
 exit 0
